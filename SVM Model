@@ -1,0 +1,99 @@
+import keras
+from keras.models import Sequential
+from keras.layers import Dense, Dropout
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split
+import pandas as pd
+from sklearn import metrics
+from sklearn.svm import SVC
+from sklearn.metrics import accuracy_score
+from sklearn.preprocessing import LabelEncoder
+from sklearn import preprocessing
+dataset=pd.read_csv(r'E:\University\3-Third Year\Selected Topics 1\Project\Dataset\data.csv')
+dataset.head()
+dataset.tail()
+dataset.dtypes
+dataset.info()
+
+#Creating a Copy Of The Data Set
+dataset_orig = dataset.copy()
+
+#Dropping Useless Columns
+dataset.drop(['id'],axis=1,inplace= True)
+dataset.drop(['age_days'],axis=1,inplace= True)
+
+#Checking For Null Values
+dataset.isna().any() #No Null Values Found
+
+
+#Encoding Categorical Varaibles To Numerics
+"""
+encode_x=LabelEncoder()
+dataset['gender'] = encode_x.fit_transform(dataset['gender'])
+
+encode_y=LabelEncoder()
+dataset['cholesterol'] = encode_y.fit_transform(dataset['cholesterol'])
+
+encode_z=LabelEncoder()
+dataset['gluc'] = encode_z.fit_transform(dataset['gluc'])
+
+"""
+#One Hot Encoding
+dataset=pd.concat([dataset, pd.get_dummies(dataset['gender'],prefix='gender',drop_first=True)],axis=1)
+dataset.drop(['gender'],axis=1,inplace= True)
+
+dataset=pd.concat([dataset, pd.get_dummies(dataset['cholesterol'],prefix='cholesterol',drop_first=True)],axis=1)
+dataset.drop(['cholesterol'],axis=1,inplace= True)
+
+dataset=pd.concat([dataset, pd.get_dummies(dataset['gluc'],prefix='gluc',drop_first=True)],axis=1)
+dataset.drop(['gluc'],axis=1,inplace= True)
+
+#Checking For Multicollinearity
+dataset.corr()  # No Collinear Features Detected !
+
+#Checking For Outliers
+print(dataset.shape)
+dataset.describe()
+
+Q1=dataset["ap_hi"].quantile(0.25)
+Q3=dataset["ap_hi"].quantile(0.75)
+IQR=Q3-Q1
+fence_low1  = Q1-1.5*IQR
+fence_high1 = Q3+1.5*IQR
+
+Q1=dataset["ap_lo"].quantile(0.25)
+Q3=dataset["ap_lo"].quantile(0.75)
+IQR=Q3-Q1
+fence_low2  = Q1-1.5*IQR
+fence_high2 = Q3+1.5*IQR
+
+Q1=dataset["weight"].quantile(0.25)
+Q3=dataset["weight"].quantile(0.75)
+IQR=Q3-Q1
+fence_low3  = Q1-1.5*IQR
+fence_high3 = Q3+1.5*IQR
+
+#Outlier Treatment By Trimming According To IQR
+dataset = dataset.loc[(dataset["ap_hi"] > fence_low1) & (dataset["ap_hi"] < fence_high1)]
+dataset = dataset.loc[(dataset["ap_lo"] > fence_low2) & (dataset["ap_lo"] < fence_high2)]
+dataset = dataset.loc[(dataset["weight"] > fence_low3) & (dataset["weight"] < fence_high3)]
+
+print(dataset.shape)
+dataset.describe()
+
+ 
+#Splitting The Dataset into Two Parts
+
+Y_col = 'cardio'
+X_cols = dataset.loc[:, dataset.columns != Y_col].columns
+train_x, test_x, train_y, test_y = train_test_split(dataset[X_cols], dataset[Y_col],test_size=0.1)
+ 
+# instantiate classifier
+classifier = SVC()
+classifier.fit(train_x, train_y)
+ 
+pred_y = classifier.predict(test_x)
+ 
+# Compute and Print Accuracy Score
+print("Model Accuracy score : ", metrics.accuracy_score(test_y, pred_y))
